@@ -3,7 +3,6 @@ import { TaskFilters } from './components/TaskFilters';
 import { TaskForm } from './components/TaskForm';
 import { TaskList } from './components/TaskList';
 import { TaskSummary } from './components/TaskSummary';
-import { AppFooter } from './components/AppFooter';
 
 export default function App() {
   return (
@@ -15,7 +14,11 @@ export default function App() {
         <TaskSummary total={3} pending={2} completed={1} />
         <TaskList />
       </main>
-      <AppFooter courseName="Diseño Frontend con Frameworks" />
+      <footer className="app-footer">
+        <div className="app-footer__content">
+          <p>Administrador de tareas — Diseño Frontend con Frameworks</p>
+        </div>
+      </footer>
     </div>
   );
 }
