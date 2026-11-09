@@ -1,22 +1,18 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
+import { Link } from 'react-router';
 import type { Task } from '../models/task.interface';
 import {
   TASK_TITLE_MAX_LENGTH,
   validateTaskTitle,
 } from '../utils/task-validation';
+import { formatTaskDate } from '../utils/date';
 
 interface TaskItemProps {
   task: Task;
   onToggleStatus: (id: string) => void;
   onEditTask: (id: string, title: string) => void;
-  onDeleteTask: (id: string) => void;
-}
-
-function formatTaskDate(value: string): string {
-  return new Intl.DateTimeFormat('es-MX', {
-    dateStyle: 'medium',
-  }).format(new Date(value));
+  onDeleteTask: (id: string) => boolean;
 }
 
 export function TaskItem({
@@ -67,7 +63,11 @@ export function TaskItem({
     <article className={`task-item task-item--${status}`} role="listitem">
       <div className="task-item__content">
         {isEditing ? (
-          <form className="task-item__edit-form" onSubmit={handleEditSubmit} noValidate>
+          <form
+            className="task-item__edit-form"
+            onSubmit={handleEditSubmit}
+            noValidate
+          >
             <label className="sr-only" htmlFor={`edit-task-${id}`}>
               Editar título de la tarea
             </label>
@@ -100,7 +100,7 @@ export function TaskItem({
               {statusLabel}
             </span>
             <p className="task-item__date">
-              Actualizada:{' '}
+              Actualizada: {''}
               <time dateTime={updatedAt}>{formatTaskDate(updatedAt)}</time>
             </p>
           </>
@@ -111,6 +111,14 @@ export function TaskItem({
         role="group"
         aria-label={`Acciones para ${title}`}
       >
+        {!isEditing && (
+          <Link
+            className="button-link button-link--secondary"
+            to={`/tasks/${id}`}
+          >
+            Ver detalle
+          </Link>
+        )}
         <button
           type="button"
           onClick={() => onToggleStatus(id)}
@@ -124,7 +132,9 @@ export function TaskItem({
         <button
           type="button"
           className="button-danger"
-          onClick={() => onDeleteTask(id)}
+          onClick={() => {
+            onDeleteTask(id);
+          }}
           disabled={isEditing}
         >
           Eliminar

@@ -11,12 +11,14 @@ function compareTasks(
   sortBy: TaskSort,
 ): number {
   switch (sortBy) {
-    case 'created-desc':
+    case 'updated-asc':
       return (
-        Date.parse(secondTask.createdAt) - Date.parse(firstTask.createdAt)
+        Date.parse(firstTask.updatedAt) - Date.parse(secondTask.updatedAt)
       );
     case 'title-asc':
       return titleCollator.compare(firstTask.title, secondTask.title);
+    case 'title-desc':
+      return titleCollator.compare(secondTask.title, firstTask.title);
     case 'updated-desc':
     default:
       return (
