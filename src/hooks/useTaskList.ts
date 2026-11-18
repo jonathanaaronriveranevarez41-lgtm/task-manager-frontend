@@ -31,7 +31,7 @@ const EMPTY_META: PageMeta = {
   hasPreviousPage: false,
 };
 
-export function useTaskList(query: TaskListQuery) {
+export function useTaskList(query: TaskListQuery, accessToken: string | null) {
   const {
     page,
     limit,
@@ -59,6 +59,21 @@ export function useTaskList(query: TaskListQuery) {
   }, []);
 
   useEffect(() => {
+    if (!accessToken) {
+      setState({
+        tasks: [],
+        meta: {
+          ...EMPTY_META,
+          page,
+          limit,
+        },
+        status: 'idle',
+        errorMessage: '',
+      });
+      return;
+    }
+
+    const token = accessToken;
     const controller = new AbortController();
 
     async function load(): Promise<void> {
@@ -69,14 +84,18 @@ export function useTaskList(query: TaskListQuery) {
       }));
 
       try {
-        const response = await listTasks({
-          page,
-          limit,
-          search,
-          status: statusFilter,
-          sortBy,
-          order,
-        }, controller.signal);
+        const response = await listTasks(
+          {
+            page,
+            limit,
+            search,
+            status: statusFilter,
+            sortBy,
+            order,
+          },
+          token,
+          controller.signal,
+        );
 
         setState({
           tasks: response.data,
@@ -108,6 +127,7 @@ export function useTaskList(query: TaskListQuery) {
       controller.abort();
     };
   }, [
+    accessToken,
     page,
     limit,
     search,

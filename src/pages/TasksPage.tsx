@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import { AppNavigation } from '../components/AppNavigation';
 import { AsyncStatus } from '../components/AsyncStatus';
 import { TaskFilters } from '../components/TaskFilters';
 import { TaskForm } from '../components/TaskForm';
 import { TaskList } from '../components/TaskList';
 import { TaskPagination } from '../components/TaskPagination';
 import { TaskSummary } from '../components/TaskSummary';
+import { useAuth } from '../hooks/useAuth';
 import { useTaskList } from '../hooks/useTaskList';
 import type {
   TaskListQuery,
@@ -42,6 +44,7 @@ function mapSort(sort: TaskSort): {
 }
 
 export function TasksPage() {
+  const { accessToken } = useAuth();
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<TaskFilter>('all');
   const [sort, setSort] = useState<TaskSort>('updated-desc');
@@ -67,7 +70,7 @@ export function TasksPage() {
     status,
     errorMessage,
     reload,
-  } = useTaskList(taskListQuery);
+  } = useTaskList(taskListQuery, accessToken);
 
   async function runMutation(
     operation: () => Promise<unknown>,
@@ -98,8 +101,9 @@ export function TasksPage() {
   }
 
   async function handleAddTask(title: string): Promise<boolean> {
+    if (!accessToken) return false;
     const succeeded = await runMutation(
-      () => createTaskRequest({ title }),
+      () => createTaskRequest({ title }, accessToken),
       'La tarea fue creada.',
     );
     if (succeeded) {
@@ -109,9 +113,10 @@ export function TasksPage() {
   }
 
   async function handleToggleStatus(id: string, currentStatus: TaskStatus): Promise<void> {
+    if (!accessToken) return;
     const nextStatus = currentStatus === 'pending' ? 'completed' : 'pending';
     const succeeded = await runMutation(
-      () => updateTaskRequest(id, { status: nextStatus }),
+      () => updateTaskRequest(id, { status: nextStatus }, accessToken),
       'El estado fue actualizado.',
     );
     if (succeeded) {
@@ -120,8 +125,9 @@ export function TasksPage() {
   }
 
   async function handleEditTask(id: string, title: string): Promise<void> {
+    if (!accessToken) return;
     const succeeded = await runMutation(
-      () => updateTaskRequest(id, { title }),
+      () => updateTaskRequest(id, { title }, accessToken),
       'El título fue actualizado.',
     );
     if (succeeded) {
@@ -130,12 +136,13 @@ export function TasksPage() {
   }
 
   function handleDeleteTask(id: string): void {
+    if (!accessToken) return;
     const shouldDelete = window.confirm('¿Estás seguro de eliminar esta tarea?');
     if (!shouldDelete) {
       return;
     }
     void runMutation(
-      () => deleteTaskRequest(id),
+      () => deleteTaskRequest(id, accessToken),
       'La tarea fue eliminada.',
     ).then((succeeded) => {
       if (succeeded) {
@@ -173,6 +180,9 @@ export function TasksPage() {
 
   return (
     <div className="page-stack">
+      {/* Barra de navegación superior con el botón de cerrar sesión */}
+      <AppNavigation />
+
       <section className="page-introduction" aria-labelledby="tasks-page-title">
         <p className="section-heading__eyebrow">Gestión remota</p>
         <h2 id="tasks-page-title">Mis tareas</h2>

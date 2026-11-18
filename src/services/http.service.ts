@@ -9,6 +9,9 @@ interface HttpErrorOptions {
   details?: unknown;
 }
 
+type UnauthorizedHandler = () => void;
+let unauthorizedHandler: UnauthorizedHandler | undefined;
+
 export class HttpError extends Error {
   readonly status: number;
   readonly code: string;
@@ -25,11 +28,26 @@ export class HttpError extends Error {
   }
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
+export function setUnauthorizedHandler(
+  handler: UnauthorizedHandler,
+): () => void {
+  unauthorizedHandler = handler;
+  return () => {
+    if (unauthorizedHandler === handler) {
+      unauthorizedHandler = undefined;
+    }
+  };
 }
 
-function isApiErrorBody(value: unknown): value is ApiErrorBody {
+function isRecord(
+  value: unknown,
+): value is Record<string, unknown> {
+  return typeof value === 'object' && value != null;
+}
+
+function isApiErrorBody(
+  value: unknown,
+): value is ApiErrorBody {
   if (!isRecord(value)) {
     return false;
   }
@@ -41,8 +59,11 @@ function isApiErrorBody(value: unknown): value is ApiErrorBody {
   );
 }
 
-async function readPayload(response: Response): Promise<unknown> {
-  const contentType = response.headers.get('content-type');
+async function readPayload(
+  response: Response,
+): Promise<unknown> {
+  const contentType =
+    response.headers.get('content-type');
   if (!contentType?.includes('application/json')) {
     return null;
   }
@@ -60,19 +81,34 @@ async function readPayload(response: Response): Promise<unknown> {
 export async function httpRequest<T>(
   path: string,
   options: RequestInit = {},
+  accessToken?: string,
 ): Promise<T> {
   const headers = new Headers(options.headers);
   headers.set('Accept', 'application/json');
-
   if (options.body && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
   }
+  if (accessToken) {
+    headers.set(
+      'Authorization',
+      `Bearer ${accessToken}`,
+    );
+  }
+
+  // --- CORRECCIÓN CLAVE ---
+  // Limpiamos y unimos correctamente API_URL y path para evitar rutas mal formadas
+  const cleanBase = API_URL.endsWith('/') ? API_URL.slice(0, -1) : API_URL;
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  const fullUrl = `${cleanBase}${cleanPath}`;
 
   try {
-    const response = await fetch(`${API_URL}${path}`, {
-      ...options,
-      headers,
-    });
+    const response = await fetch(
+      fullUrl,
+      {
+        ...options,
+        headers,
+      },
+    );
 
     if (response.status === 204) {
       return undefined as T;
@@ -81,6 +117,9 @@ export async function httpRequest<T>(
     const payload = await readPayload(response);
 
     if (!response.ok) {
+      if (response.status === 401 && accessToken) {
+        unauthorizedHandler?.();
+      }
       if (isApiErrorBody(payload)) {
         throw new HttpError({
           status: response.status,
@@ -99,9 +138,13 @@ export async function httpRequest<T>(
 
     return payload as T;
   } catch (error) {
-    if (error instanceof HttpError || isAbortError(error)) {
+    if (
+      error instanceof HttpError ||
+      isAbortError(error)
+    ) {
       throw error;
     }
+
     throw new HttpError({
       status: 0,
       code: 'NETWORK_ERROR',
@@ -110,18 +153,29 @@ export async function httpRequest<T>(
   }
 }
 
-export function isAbortError(error: unknown): boolean {
-  return error instanceof DOMException && error.name === 'AbortError';
+export function isAbortError(
+  error: unknown,
+): boolean {
+  return error instanceof DOMException &&
+    error.name === 'AbortError';
 }
 
-export function isHttpError(error: unknown): error is HttpError {
+export function isHttpError(
+  error: unknown,
+): error is HttpError {
   return error instanceof HttpError;
 }
 
-export function getHttpErrorMessage(error: unknown): string {
+export function getHttpErrorMessage(
+  error: unknown,
+): string {
   if (!isHttpError(error)) {
     return 'Ocurrió un error inesperado.';
   }
-  const reference = error.requestId ? ` Referencia: ${error.requestId}.` : '';
+
+  const reference = error.requestId
+    ? ` Referencia: ${error.requestId}.`
+    : '';
+
   return `${error.message}${reference}`;
 }
