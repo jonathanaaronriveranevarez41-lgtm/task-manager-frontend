@@ -1,16 +1,24 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { BrowserRouter } from 'react-router';
 import App from './App';
+import { AuthProvider } from './providers/AuthProvider';
 import './styles/index.css';
+import './styles/auth.css'; // <--- Aquí debes agregarlo
 
-const rootElement = document.getElementById('root');
-
-if (!rootElement) {
-  throw new Error('No se encontró el elemento #root.');
+const root = document.getElementById('root');
+if (!root) {
+  throw new Error(
+    'No se encontró el elemento #root.',
+  );
 }
 
-createRoot(rootElement).render(
+createRoot(root).render(
   <StrictMode>
-    <App />
+    <BrowserRouter>
+      <AuthProvider>
+        <App />
+      </AuthProvider>
+    </BrowserRouter>
   </StrictMode>,
 );
