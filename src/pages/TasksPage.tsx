@@ -112,9 +112,11 @@ export function TasksPage() {
     return succeeded;
   }
 
-  async function handleToggleStatus(id: string, currentStatus: TaskStatus): Promise<void> {
+  async function handleToggleStatus(
+    id: string,
+    nextStatus: TaskStatus,
+  ): Promise<void> {
     if (!accessToken) return;
-    const nextStatus = currentStatus === 'pending' ? 'completed' : 'pending';
     const succeeded = await runMutation(
       () => updateTaskRequest(id, { status: nextStatus }, accessToken),
       'El estado fue actualizado.',
